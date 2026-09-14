@@ -100,4 +100,42 @@ router.post('/', verifyFirebaseToken, async (req: Request, res: Response): Promi
   }
 });
 
+// Hoàn thành chuyến đi (Tài xế gọi)
+router.post('/:id/complete', verifyFirebaseToken, async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  
+  try {
+    const updatedRide = await prisma.ride.update({
+      where: { id },
+      data: { status: RideStatus.completed },
+    });
+    res.status(200).json({ message: 'Ride completed', ride: updatedRide });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to complete ride' });
+  }
+});
+
+// Đánh giá sau chuyến đi (Khách hàng / Tài xế gọi)
+router.post('/:id/rate', verifyFirebaseToken, async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { rating, comment, targetUserId } = req.body;
+  
+  try {
+    // 1. Tìm user được đánh giá và cập nhật lại điểm (Logic tính trung bình siêu đơn giản)
+    const targetUser = await prisma.user.findUnique({ where: { uid: targetUserId } });
+    if (targetUser) {
+      // Giả sử cứ trung bình cộng dần (Thực tế cần lưu bảng Rating riêng để tính chuẩn hơn)
+      const newRating = (targetUser.rating + rating) / 2;
+      await prisma.user.update({
+        where: { uid: targetUserId },
+        data: { rating: newRating }
+      });
+    }
+
+    res.status(200).json({ message: 'Rating submitted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to submit rating' });
+  }
+});
+
 export default router;

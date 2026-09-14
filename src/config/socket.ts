@@ -80,6 +80,17 @@ export const setupSocket = (httpServer: HttpServer) => {
       }
     });
 
+    // Tài xế cập nhật vị trí liên tục
+    socket.on('driver_location_update', (data: { rideId: string; driverId: string; lat: number; lng: number; heading?: number }) => {
+      // Gửi vị trí tài xế cho tất cả người trong phòng (tức là khách hàng)
+      io.to(`ride_${data.rideId}`).emit('driver_location', {
+        driverId: data.driverId,
+        lat: data.lat,
+        lng: data.lng,
+        heading: data.heading
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`[Socket] 🔴 User disconnected: ${socket.id}`);
     });

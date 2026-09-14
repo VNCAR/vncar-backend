@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  driver
+}
+
+enum RideType {
+  person
+  cargo
+}
+
+enum RideStatus {
+  pending
+  matched
+  completed
+  cancelled
+}
+
+enum BidStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum KycStatus {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+model User {
+  uid                  String    @id
+  name                 String?
+  phone                String    @unique
+  role                 Role      @default(customer)
+  kycStatus            KycStatus @default(unverified)
+  rating               Float     @default(5.0)
+  subscriptionEndDate  DateTime?
+  
+  // KYC Documents
+  frontIdCardUrl       String?
+  backIdCardUrl        String?
+  selfieUrl            String?
+  vehicleFrontUrl      String?
+  vehicleBackUrl       String?
+  vehicleLeftUrl       String?
+  vehicleRightUrl      String?
+  businessLicenseUrl   String?
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  ridesCreated         Ride[]    @relation("RideCreator")
+  bidsPlaced           Bid[]     @relation("BidCreator")
+}
+
+model Ride {
+  id                   String    @id @default(uuid())
+  creatorId            String
+  creator              User      @relation("RideCreator", fields: [creatorId], references: [uid])
+  
+  originLat            Float
+  originLng            Float
+  originAddress        String?
+  
+  destLat              Float
+  destLng              Float
+  destAddress          String?
+  
+  time                 DateTime
+  suggestedPrice       Float
+  type                 RideType  @default(person)
+  shareable            Boolean   @default(false)
+  status               RideStatus @default(pending)
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  bids                 Bid[]
+}
+
+model Bid {
+  id                   String    @id @default(uuid())
+  rideId               String
+  ride                 Ride      @relation(fields: [rideId], references: [id])
+  
+  bidderId             String
+  bidder               User      @relation("BidCreator", fields: [bidderId], references: [uid])
+  
+  offeredPrice         Float
+  status               BidStatus @default(pending)
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
